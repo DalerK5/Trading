@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: probe
+        shell: bash {0}
         run: |
           UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
           for u in \
@@ -21,9 +22,19 @@ jobs:
             "https://api.gold-api.com/price/XAU" \
             "https://nfs.faireconomy.media/ff_calendar_thisweek.json" \
             "https://api.gdeltproject.org/api/v2/doc/doc?query=gold%20sourcelang:english&mode=artlist&maxrecords=3&timespan=6h&format=json" \
-            "https://data-api.binance.vision/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=1" ; do
+            "https://data-api.binance.vision/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=1" \
+            "https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=1" \
+            "https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=15min&outputsize=3&apikey=demo" \
+            "https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=XAU&to_symbol=USD&interval=15min&apikey=demo" \
+            "https://api.kraken.com/0/public/OHLC?pair=PAXGUSD&interval=15" \
+            "https://api.exchange.coinbase.com/products/PAXG-USD/candles?granularity=900" \
+            "https://www.okx.com/api/v5/market/candles?instId=XAUT-USDT&bar=15m&limit=2" \
+            "https://api.bybit.com/v5/market/kline?category=linear&symbol=XAUUSDT&interval=15&limit=2" \
+            "https://fapi.binance.com/fapi/v1/klines?symbol=XAUUSDT&interval=15m&limit=2" \
+            "https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD" \
+            "https://freeserv.dukascopy.com/2.0/?path=chart/json3&instrument=XAU/USD&offer_side=B&interval=15MIN&splits=true&stocks=true&limit=3&time_direction=P&jsonp=x" ; do
             echo "=== $u"
-            curl -s -A "$UA" -m 20 -D /tmp/h -o /tmp/b "$u"; head -1 /tmp/h; grep -i "access-control-allow-origin" /tmp/h; head -c 400 /tmp/b; echo
+            curl -s -A "$UA" -m 20 -D /tmp/h -o /tmp/b "$u"; head -1 /tmp/h; grep -i "access-control-allow-origin" /tmp/h; head -c 300 /tmp/b; echo
             python3 - <<'EOF' || true
           import json
           try:
