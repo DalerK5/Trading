@@ -10,7 +10,7 @@ const isTrade = (s: Signal) => s.status === "sl" || (s.maxTp >= 1 && ["tp3", "be
 const tip = { contentStyle: { background: "#151515", border: "1px solid #2c261d", fontSize: 12, fontFamily: "IBM Plex Mono" }, labelStyle: { color: "#988575" } };
 
 export default function Stats() {
-  const { engine, liftBlock, rollback, now } = useEngine();
+  const { engine, now } = useEngine();
   const trades = useMemo(() => engine.signals.filter(isTrade).sort((a, b) => (a.closedAt ?? 0) - (b.closedAt ?? 0)), [engine.signals]);
 
   const k = useMemo(() => {
@@ -257,11 +257,6 @@ export default function Stats() {
                   <span className={v.status === "live" ? "text-gold" : "text-cream/80"}>v{v.version}</span>
                   <span className="text-[10.5px] text-taupe">{v.status}</span>
                   <span className="text-[10.5px] text-taupe">{v.activatedAt ? fmtTime(v.activatedAt) : ""}</span>
-                  {v.status !== "live" && (
-                    <button onClick={() => rollback(v.version)} className="ml-auto border border-line px-2 text-[10.5px] text-taupe hover:border-gold hover:text-gold">
-                      откатить
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
@@ -277,9 +272,7 @@ export default function Stats() {
                     <span className="text-cream">
                       Circuit breaker: «{SETUP_LABEL[b.type]}» — {b.reason}
                     </span>
-                    <button onClick={() => liftBlock(i)} className="ml-auto border border-line px-2 py-0.5 text-[11px] text-cream hover:border-gold hover:text-gold">
-                      ревью пройдено — снять
-                    </button>
+                    <span className="ml-auto font-mono text-[11px] text-taupe">до {b.until ? fmtTime(b.until) : "ревью"}</span>
                   </div>
                 ) : null,
               )}

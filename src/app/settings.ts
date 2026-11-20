@@ -1,9 +1,6 @@
-import type { LlmConfig } from "@/engine/llm";
-
 export type Priority = "high" | "normal" | "low";
 
 export interface Settings {
-  dataSource: "auto" | "demo";
   pushEnabled: boolean;
   events: Record<string, boolean>;
   quietFrom: number; // hour, local
@@ -13,7 +10,6 @@ export interface Settings {
   minPriority: Priority;
   accountSize: number;
   riskPct: number;
-  llm: LlmConfig & { enabled: boolean };
 }
 
 export const EVENT_LABELS: Record<string, string> = {
@@ -30,7 +26,6 @@ export const EVENT_LABELS: Record<string, string> = {
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  dataSource: "auto",
   pushEnabled: false,
   events: Object.fromEntries(Object.keys(EVENT_LABELS).map((k) => [k, k !== "signal.expired"])),
   quietFrom: 23,
@@ -40,7 +35,6 @@ export const DEFAULT_SETTINGS: Settings = {
   minPriority: "low",
   accountSize: 10000,
   riskPct: 1,
-  llm: { enabled: false, baseUrl: "https://openrouter.ai/api/v1", apiKey: "", model: "qwen/qwen3-32b:free" },
 };
 
 export function loadJSON<T>(key: string, fallback: T): T {
@@ -62,5 +56,5 @@ export function saveJSON(key: string, v: unknown) {
 
 export function loadSettings(): Settings {
   const s = loadJSON<Partial<Settings>>("aurum.settings", {});
-  return { ...DEFAULT_SETTINGS, ...s, events: { ...DEFAULT_SETTINGS.events, ...(s.events ?? {}) }, llm: { ...DEFAULT_SETTINGS.llm, ...(s.llm ?? {}) } };
+  return { ...DEFAULT_SETTINGS, ...s, events: { ...DEFAULT_SETTINGS.events, ...(s.events ?? {}) } };
 }

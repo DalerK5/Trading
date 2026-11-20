@@ -11,6 +11,14 @@ import { cn } from "@/lib/utils";
 const KIND: Record<Level["kind"], string> = { order_block: "order block", swing: "swing-зона", fvg: "FVG", liquidity_pool: "liquidity pool" };
 const TREND = { up: "↑", down: "↓", range: "↔" } as const;
 
+/** XAUUSD spot trades Sunday ~22:00 UTC → Friday ~22:00 UTC */
+function xauOpen(t: number) {
+  const d = new Date(t);
+  const day = d.getUTCDay();
+  const h = d.getUTCHours();
+  return !(day === 6 || (day === 5 && h >= 22) || (day === 0 && h < 22));
+}
+
 export default function Dashboard() {
   const e = useEngine();
   const [tf, setTf] = useState<TF>("M15");
@@ -18,6 +26,7 @@ export default function Dashboard() {
   const price = e.price;
   const change = price != null && e.prevClose ? price - e.prevClose : null;
   const age = e.now - e.quoteAt;
+  const staleMs = e.livePrice || e.mode === "demo" ? 120_000 : 12 * 60_000;
   const open = e.engine.signals.filter(isOpen);
 
   const chartLevels = useMemo(() => {
@@ -63,9 +72,9 @@ export default function Dashboard() {
         className="lg:col-span-4"
         title="XAUUSD · спот"
         right={
-          <span className={cn("flex items-center gap-1.5", age > 120_000 ? "text-bear" : "text-bull")}>
-            <span className={cn("h-1.5 w-1.5 rounded-full", age > 120_000 ? "bg-bear" : "bg-bull animate-pulse")} />
-            {age > 120_000 ? "данные устарели" : "live"}
+          <span className={cn("flex items-center gap-1.5", !xauOpen(e.now) ? "text-taupe" : age > staleMs ? "text-bear" : "text-bull")}>
+            <span className={cn("h-1.5 w-1.5 rounded-full", !xauOpen(e.now) ? "bg-taupe" : age > staleMs ? "bg-bear" : "bg-bull animate-pulse")} />
+            {!xauOpen(e.now) ? "рынок закрыт" : age > staleMs ? "данные устарели" : "live"}
           </span>
         }
       >
@@ -89,9 +98,9 @@ export default function Dashboard() {
           </div>
         </dl>
         <p className="mt-3 text-[11px] leading-snug text-taupe">
-          {e.source === "binance"
-            ? "Источник: Binance PAXG/USDT (токен, обеспеченный 1 oz золота) — бесплатный прокси спот-XAU. Опрос каждые 30 сек."
-            : "Демо-рынок: синтетические котировки XAUUSD. Живой источник недоступен из этой сети."}
+          {e.mode === "shared"
+            ? `Цена: XAU/USD спот ${e.livePrice ? "(live, каждые 15 сек)" : ""}. Анализ: ${e.provider}. Сервер пересчитывает анализ каждые 5 мин — история сигналов общая для всех пользователей. Последний пересчёт ${ago(e.now - e.updatedAt)}.`
+            : "Демо-рынок: синтетические котировки XAUUSD. Общий сервер данных недоступен."}
         </p>
       </Panel>
 
@@ -265,7 +274,7 @@ export default function Dashboard() {
       </Panel>
 
       {/* news */}
-      <Panel className="lg:col-span-6" title="Новостной сантимент (6 ч)" right={<button onClick={() => void e.refreshNews()} className="hover:text-gold">{e.sentimentBy} ↻</button>}>
+      <Panel className="lg:col-span-6" title="Новостной сантимент (6 ч)" right={<button onClick={() => void e.refresh()} className="hover:text-gold">{e.sentimentBy} ↻</button>}>
         {e.headlines.length ? (
           <ul className="max-h-64 space-y-2 overflow-y-auto pr-1 text-[12.5px]">
             {e.headlines.slice(0, 15).map((h, i) => (
@@ -280,7 +289,7 @@ export default function Dashboard() {
           </ul>
         ) : (
           <Empty>
-            {e.source === "demo"
+            {e.mode === "demo"
               ? "В демо-режиме новостной поток отключён — вес фактора «сантимент» автоматически перераспределяется."
               : "Заголовки недоступны (GDELT). Фактор сантимента исключён из WCS, веса перенормированы."}
           </Empty>

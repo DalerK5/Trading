@@ -323,7 +323,7 @@ export interface ModelVersion {
 
 export interface EngineState {
   schema: number;
-  source: "binance" | "demo";
+  source: string;
   lastTs: number; // last processed M15 close
   seq: number;
   weights: Weights;

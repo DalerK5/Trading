@@ -1,0 +1,54 @@
+name: AI engine (shared XAUUSD history)
+
+# Runs the analysis engine on a schedule and publishes one shared state for all users
+# to the `data` branch (public.json is read by the website).
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["src/engine/**", "scripts/**", ".github/workflows/engine.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: engine
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Load previous state
+        run: |
+          git clone --quiet --depth 1 --branch data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data-out \
+            || (mkdir -p data-out && echo "no data branch yet — cold start")
+      - name: Run engine
+        env:
+          DATA_DIR: data-out
+          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_PUBLIC_URL: ${{ vars.TELEGRAM_PUBLIC_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+        run: npx --yes tsx@4.19.2 scripts/runner.ts
+      - name: Publish state (single-commit data branch)
+        run: |
+          cd data-out
+          rm -rf .git
+          git init --quiet -b data
+          git config user.name "aurum-engine"
+          git config user.email "aurum-engine@users.noreply.github.com"
+          git add state.json public.json
+          git commit --quiet -m "engine state $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push --quiet --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data

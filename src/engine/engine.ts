@@ -26,7 +26,7 @@ const TTL_MS = 12 * 3_600_000;
 const MAX_ACTIVE_MS = 5 * 86_400_000;
 const WINDOW: Record<TF, number> = { M15: 300, H1: 500, H4: 300, D1: 200 };
 
-export function initialState(source: EngineState["source"]): EngineState {
+export function initialState(source: string): EngineState {
   return {
     schema: SCHEMA,
     source,

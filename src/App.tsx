@@ -127,9 +127,9 @@ function Shell() {
             ))}
           </nav>
           <div className="ml-auto flex items-stretch">
-            <span className={cn("hidden items-center gap-1.5 border-l border-line px-4 font-mono text-[10.5px] uppercase tracking-[0.12em] lg:flex", e.source === "demo" ? "text-gold" : "text-taupe")}>
-              <span className={cn("h-1.5 w-1.5 rounded-full", e.source === "demo" ? "bg-gold" : "bg-bull animate-pulse")} />
-              {e.source === "demo" ? "демо-рынок" : `live · ${ago(e.now - e.quoteAt)}`}
+            <span className={cn("hidden items-center gap-1.5 border-l border-line px-4 font-mono text-[10.5px] uppercase tracking-[0.12em] lg:flex", e.mode === "demo" ? "text-gold" : "text-taupe")}>
+              <span className={cn("h-1.5 w-1.5 rounded-full", e.mode === "demo" ? "bg-gold" : e.livePrice ? "bg-bull animate-pulse" : "bg-taupe")} />
+              {e.mode === "demo" ? "демо-рынок" : `${e.livePrice ? "live" : "цена"} · ${ago(e.now - e.quoteAt)}`}
             </span>
             <Link to="/docs" className="hidden items-center border-l border-line px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-taupe hover:text-gold sm:flex">
               ТЗ
@@ -139,13 +139,13 @@ function Shell() {
         </div>
       </header>
 
-      {e.source === "demo" && loc.pathname === "/" && (
+      {e.mode === "demo" && loc.pathname === "/" && (
         <div className="mt-14 border-b border-gold/30 bg-gold/10 px-4 py-2 text-center text-[12px] text-gold">
-          Демо-режим: синтетический рынок XAUUSD. Live-котировки Binance недоступны из этой сети или выбран демо в настройках.
+          Демо-режим: общий сервер данных недоступен, показан локальный синтетический рынок XAUUSD.
         </div>
       )}
 
-      <main className={cn("mx-auto max-w-[1440px] px-3 pb-24 sm:px-5 md:pb-10", e.source === "demo" && loc.pathname === "/" ? "pt-4" : "pt-[72px]")}>
+      <main className={cn("mx-auto max-w-[1440px] px-3 pb-24 sm:px-5 md:pb-10", e.mode === "demo" && loc.pathname === "/" ? "pt-4" : "pt-[72px]")}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/signals" element={<Signals />} />
