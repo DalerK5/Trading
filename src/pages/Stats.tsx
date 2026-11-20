@@ -10,7 +10,7 @@ const isTrade = (s: Signal) => s.status === "sl" || (s.maxTp >= 1 && ["tp3", "be
 const tip = { contentStyle: { background: "#151515", border: "1px solid #2c261d", fontSize: 12, fontFamily: "IBM Plex Mono" }, labelStyle: { color: "#988575" } };
 
 export default function Stats() {
-  const { engine, now } = useEngine();
+  const { engine, now, mode } = useEngine();
   const trades = useMemo(() => engine.signals.filter(isTrade).sort((a, b) => (a.closedAt ?? 0) - (b.closedAt ?? 0)), [engine.signals]);
 
   const k = useMemo(() => {
@@ -101,7 +101,7 @@ export default function Stats() {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-xl font-semibold text-cream">Статистика ИИ — прозрачный трек-рекорд</h1>
         <span className="font-mono text-[12px] text-taupe">
-          в эфире: <span className="text-gold">v{engine.version}</span> · {engine.source === "demo" ? "демо-рынок" : "Binance PAXG"} · walk-forward
+          в эфире: <span className="text-gold">v{engine.version}</span> · {mode === "demo" ? "демо-рынок" : "XAUUSD · общая история"} · walk-forward
         </span>
       </div>
 

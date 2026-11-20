@@ -194,7 +194,17 @@ async function main() {
   let sentimentBy = prev?.sentimentBy ?? "нет данных";
   if (!prev || now - prev.headlinesAt > 14 * 60_000) {
     try {
-      const res = await classifyHeadlines(await fetchHeadlines(), LLM);
+      let items: Awaited<ReturnType<typeof fetchHeadlines>> = [];
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          items = await fetchHeadlines();
+          break;
+        } catch (err) {
+          if (attempt === 2) throw err;
+          await new Promise((r) => setTimeout(r, 4000));
+        }
+      }
+      const res = await classifyHeadlines(items, LLM);
       headlines = res.headlines;
       sentimentBy = res.by;
     } catch (e) {
