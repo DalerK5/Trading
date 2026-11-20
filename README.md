@@ -1,73 +1,38 @@
-# React + TypeScript + Vite
+# AURUM·AI — ИИ-аналитик золота (XAUUSD)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Рабочее веб-приложение по проектной документации из этого репозитория (документация доступна внутри приложения во вкладке «ТЗ», маршрут `#/docs`).
 
-Currently, two official plugins are available:
+## Что умеет
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+**Dashboard**: живая цена, спред, торговая сессия и возраст данных. Анализ ИИ: шкала WCS, bias, структура по M15/H1/H4/D1, сантимент новостей и обратный отсчёт до ближайшего high-impact события. Карта уровней с подсказками о происхождении каждого уровня, свечной график с зонами SnR/OB/FVG, активный сетап или причина, по которой его нет, кандидаты в наблюдении, экономический календарь USD и лента заголовков.
 
-## React Compiler
+**Сигналы**: активные сигналы и история с фильтрами по периоду, исходу, направлению и версии модели. Экспорт в CSV/JSON. В карточке сигнала: Entry/SL/TP1–3, R:R, разложение confluence, обоснование, таймлайн, калькулятор объёма и Post-Trade Analysis.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Статистика ИИ**: Win rate, Avg R, Profit factor, Max DD и lead time. Equity curve в R с отметками версий модели, распад по стратегиям, heatmap «день × сессия», калибровка WCS. Плюс веса факторов, версии модели с откатом, журнал самообучения, circuit breaker и журнал пропусков.
 
-## Expanding the ESLint configuration
+**Настройки**: браузерные push-уведомления с тихими часами, дневным лимитом и приоритетами; риск-профиль; источник данных (live/демо); опциональная LLM через любой OpenAI-совместимый API; экспорт и сброс модели.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Как это работает
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Всё работает в браузере, сервер не нужен (`src/engine`):
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **Данные**: Binance `PAXG/USDT` (токен, обеспеченный золотом) как бесплатный прокси спот-XAU, опрос каждые 30 сек. Если источник недоступен, приложение переключается на детерминированный демо-рынок и показывает это.
+- **Движки**: фракталы n=3 + кластеризация уровней, order blocks, FVG, liquidity sweep, BOS/CHoCH, свечные паттерны, RSI-дивергенции, Volume Profile, ATR.
+- **WCS = 100·Σ wᵢ·sᵢ**; публикация при WCS ≥ 70, R:R до TP2 ≥ 2 и без вето (news blackout, conflict D1, stale data, широкий стоп, дубликат, circuit breaker).
+- **Сигналы**: limit от зоны / stop на пробой / market-on-trigger. Конечный автомат PENDING → ACTIVE → TP1–3 / SL / BE / EXPIRED / CANCELLED, спорные свечи засчитываются по худшему исходу.
+- **Самообучение**: детерминированная таксономия причин SL, обновление весов exponentiated gradient (η = 0.05, клиппинг 0.02–0.40, минимум 3 сделки), shadow-проверка на 20 последних сделках, версии модели.
+- **Новости**: календарь ForexFactory (или расчётное расписание USD-релизов) и заголовки GDELT с лексическим или LLM-классификатором.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+При первом запуске движок прогоняется walk-forward по 45 дням истории. Так сразу появляются трек-рекорд и журнал. Состояние хранится в `localStorage`.
+
+## Запуск
+
+```bash
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # статическая сборка в dist/
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Деплой: workflow `.github/workflows/deploy.yml` публикует сайт на GitHub Pages при пуше в `main`. В настройках репозитория включите Pages → Source: GitHub Actions.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+> Не является инвестиционной рекомендацией. Торговля золотом сопряжена с высоким риском.

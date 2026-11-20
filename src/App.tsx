@@ -1,290 +1,193 @@
-import { useEffect, useMemo, useState } from "react";
-import { NAV } from "@/lib/nav";
-import { Overview } from "@/sections/Overview";
-import { ProductUx } from "@/sections/ProductUx";
-import { AiArch } from "@/sections/AiArch";
-import { SelfLearning } from "@/sections/SelfLearning";
-import { DataSchemas } from "@/sections/DataSchemas";
-import { TechStack } from "@/sections/TechStack";
-import { Roadmap } from "@/sections/Roadmap";
-import { Risks } from "@/sections/Risks";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { lazy, Suspense, useState } from "react";
+import { NavLink, Route, Routes, Link, useLocation } from "react-router";
+import { Toaster } from "sonner";
+import { EngineProvider, useEngine } from "@/app/store";
+import { ago, fmt, fmtTime } from "@/app/ui";
+import Dashboard from "@/pages/Dashboard";
+import Signals, { SignalDetail } from "@/pages/Signals";
+import Stats from "@/pages/Stats";
+import SettingsPage from "@/pages/SettingsPage";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Progress } from "@/components/ui/progress";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-/* ── scrollspy ─────────────────────────────────────────────────── */
+const Docs = lazy(() => import("@/pages/Docs"));
 
-function useScrollSpy() {
-  const [active, setActive] = useState<string>("obzor");
-  useEffect(() => {
-    const ids = NAV.flatMap((n) => [n.id, ...n.children.map((c) => c.id)]);
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) setActive(e.target.id);
-        }
-      },
-      { rootMargin: "-15% 0px -70% 0px" }
-    );
-    ids.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, []);
-  return active;
-}
+const TABS = [
+  { to: "/", label: "Dashboard", icon: "M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z" },
+  { to: "/signals", label: "Сигналы", icon: "M3 17l6-6 4 4 8-8M15 7h6v6" },
+  { to: "/stats", label: "Статистика ИИ", icon: "M4 20V10M10 20V4M16 20v-8M22 20H2" },
+  { to: "/settings", label: "Настройки", icon: "M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" },
+];
 
-/* ── nav list (shared by sidebar & drawer) ─────────────────────── */
-
-function NavList({
-  activeId,
-  onNavigate,
-}: {
-  activeId: string;
-  onNavigate?: () => void;
-}) {
+function Icon({ d }: { d: string }) {
   return (
-    <nav className="flex flex-col">
-      {NAV.map((item) => {
-        const isActive =
-          item.id === activeId || item.children.some((c) => c.id === activeId);
-        return (
-          <a
-            key={item.id}
-            href={`#${item.id}`}
-            onClick={onNavigate}
-            className={cn(
-              "flex min-h-[44px] items-center gap-3 border-b border-line/60 px-4 py-3 text-[13px] transition-colors",
-              isActive
-                ? "bg-raised text-gold"
-                : "text-cream/70 hover:text-cream hover:bg-raised/60"
-            )}
-          >
-            <span className="font-mono text-[11px] text-taupe">{item.num}</span>
-            <span className="leading-snug">{item.label}</span>
-          </a>
-        );
-      })}
-    </nav>
-  );
-}
-
-/* ── hero decoration: SVG chart ────────────────────────────────── */
-
-function HeroChart() {
-  const pts =
-    "0,84 18,78 36,82 54,66 72,70 90,54 108,60 126,44 144,50 162,38 180,46 198,30 216,36 234,26 252,34 270,20 288,26 306,14";
-  return (
-    <svg
-      viewBox="0 0 320 100"
-      className="h-28 w-full"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      {[20, 50, 80].map((y) => (
-        <line key={y} x1="0" y1={y} x2="320" y2={y} stroke="#2c261d" strokeWidth="1" />
-      ))}
-      <line x1="0" y1="62" x2="320" y2="62" stroke="#d69900" strokeWidth="1" strokeDasharray="4 4" opacity="0.55" />
-      <line x1="0" y1="30" x2="320" y2="30" stroke="#d69900" strokeWidth="1" strokeDasharray="4 4" opacity="0.35" />
-      <polyline points={pts} fill="none" stroke="#fef1e8" strokeWidth="1.5" strokeLinejoin="round" />
-      <circle cx="306" cy="14" r="2.5" fill="#d69900" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
     </svg>
   );
 }
 
-/* ── ticker ────────────────────────────────────────────────────── */
-
-const TICKER_ITEMS = [
-  "XAUUSD · SPOT", "SUPPORT / RESISTANCE", "ORDER BLOCKS", "LIQUIDITY SWEEP",
-  "MARKET STRUCTURE", "RSI DIVERGENCE", "VOLUME PROFILE", "CPI · PPI · NFP · FOMC",
-  "WEIGHTED CONFLUENCE SCORE", "R:R ≥ 1:2", "SELF-CORRECTION LOOP", "POST-TRADE ANALYSIS",
-];
-
-function Ticker() {
-  const row = [...TICKER_ITEMS, ...TICKER_ITEMS];
+function Inbox() {
+  const { inbox, markInboxRead, clearInbox } = useEngine();
+  const unread = inbox.filter((i) => !i.read).length;
+  const [open, setOpen] = useState(false);
   return (
-    <div className="overflow-hidden border-y border-line bg-cream text-ink">
-      <div className="ticker-track flex w-max whitespace-nowrap py-2">
-        {row.map((t, i) => (
-          <span key={i} className="font-mono text-[11px] uppercase tracking-[0.18em] px-6">
-            {t} <span className="text-gold">·</span>
-          </span>
-        ))}
-      </div>
-    </div>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) markInboxRead();
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button className="relative flex h-14 w-14 items-center justify-center border-l border-line text-cream hover:bg-raised" aria-label="Уведомления">
+          <Icon d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" />
+          {unread > 0 && <span className="absolute right-3 top-3 min-w-[16px] bg-gold px-1 font-mono text-[10px] font-bold text-ink">{unread > 99 ? "99+" : unread}</span>}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-[340px] border-line bg-ink p-0 text-cream">
+        <div className="flex items-center justify-between border-b border-line px-4 py-2">
+          <span className="micro-label">Уведомления</span>
+          <button onClick={clearInbox} className="font-mono text-[11px] text-taupe hover:text-gold">
+            очистить
+          </button>
+        </div>
+        <div className="max-h-[420px] overflow-y-auto">
+          {inbox.length ? (
+            inbox.map((i) => (
+              <Link
+                key={i.id}
+                to={i.signalId ? `/signals/${i.signalId}` : "/"}
+                onClick={() => setOpen(false)}
+                className={cn("block border-b border-line/60 px-4 py-2.5 hover:bg-raised", !i.read && "bg-gold/5")}
+              >
+                <div className="flex items-center gap-2 text-[13px]">
+                  {!i.read && <span className="h-1.5 w-1.5 bg-gold" />}
+                  <span className="text-cream">{i.title}</span>
+                  {i.digest && <span className="ml-auto font-mono text-[9.5px] text-taupe">ДАЙДЖЕСТ</span>}
+                </div>
+                <div className="text-[12px] text-taupe">{i.body}</div>
+                <div className="font-mono text-[10.5px] text-taupe/70">{fmtTime(i.at)}</div>
+              </Link>
+            ))
+          ) : (
+            <div className="px-4 py-8 text-center text-[13px] text-taupe">Пока тихо. Уведомления появятся при публикации сетапов и событиях сделок.</div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
-/* ── app ───────────────────────────────────────────────────────── */
+function Shell() {
+  const e = useEngine();
+  const loc = useLocation();
+  const change = e.price != null && e.prevClose ? e.price - e.prevClose : 0;
 
-export default function App() {
-  const activeId = useScrollSpy();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const activeSection = useMemo(
-    () =>
-      NAV.find(
-        (n) => n.id === activeId || n.children.some((c) => c.id === activeId)
-      ) ?? NAV[0],
-    [activeId]
-  );
+  if (e.phase !== "ready") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-ink px-6 text-cream">
+        <div className="flex items-center gap-2">
+          <span className="h-3 w-3 bg-gold" />
+          <span className="font-mono text-lg font-semibold tracking-[0.08em]">AURUM·AI</span>
+        </div>
+        <div className="w-full max-w-sm space-y-2">
+          <Progress value={e.phase === "loading" ? 5 : Math.round(e.progress * 100)} className="h-1 bg-line [&>div]:bg-gold" />
+          <div className="text-center font-mono text-[12px] text-taupe">{e.message}</div>
+        </div>
+        <p className="max-w-md text-center text-[12.5px] text-taupe">
+          Движки SnR/SMC, структура, RSI-дивергенции, Volume Profile и новостной фильтр прогоняются walk-forward по истории — так формируется честный трек-рекорд и журнал самообучения.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-ink text-cream">
-      {/* header */}
       <header className="fixed inset-x-0 top-0 z-40 border-b border-line bg-ink/95 backdrop-blur">
         <div className="flex h-14 items-stretch">
-          <div className="flex items-center gap-2 border-r border-line px-4 sm:px-5">
+          <Link to="/" className="flex items-center gap-2 border-r border-line px-4 sm:px-5">
             <span className="h-2.5 w-2.5 bg-gold" />
-            <span className="font-mono text-sm font-semibold tracking-[0.08em]">
-              AURUM·AI
+            <span className="font-mono text-sm font-semibold tracking-[0.08em]">AURUM·AI</span>
+          </Link>
+          <div className="flex items-center gap-3 px-4 font-mono">
+            <span className="hidden text-[11px] tracking-[0.14em] text-taupe sm:inline">XAUUSD</span>
+            <span className="text-[15px] font-semibold">{fmt(e.price)}</span>
+            <span className={cn("hidden text-[12px] sm:inline", change >= 0 ? "text-bull" : "text-bear")}>
+              {change >= 0 ? "▲" : "▼"} {fmt(Math.abs(change))}
             </span>
           </div>
-          <div className="hidden sm:flex items-center px-5 font-mono text-[11px] uppercase tracking-[0.18em] text-taupe">
-            Проектная документация — автономный ИИ-аналитик XAUUSD
-          </div>
-          <div className="ml-auto flex items-center">
-            <div className="hidden md:flex items-center gap-5 border-l border-line px-5 font-mono text-[11px] uppercase tracking-[0.14em] text-taupe">
-              <span>v1.0</span>
-              <span>01.10.2026</span>
-              <span className="text-gold">Концепция + ТЗ</span>
-            </div>
-            <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-              <SheetTrigger asChild>
-                <button
-                  className="flex lg:hidden h-14 w-14 items-center justify-center border-l border-line text-cream"
-                  aria-label="Открыть оглавление"
-                >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" />
-                  </svg>
-                </button>
-              </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="w-[300px] border-line bg-ink p-0 text-cream"
-              >
-                <SheetTitle className="border-b border-line px-4 py-4 font-mono text-[11px] uppercase tracking-[0.18em] text-taupe">
-                  Содержание
-                </SheetTitle>
-                <div className="max-h-[calc(100vh-60px)] overflow-y-auto safe-bottom">
-                  <NavList activeId={activeId} onNavigate={() => setDrawerOpen(false)} />
-                </div>
-              </SheetContent>
-            </Sheet>
+          <nav className="ml-4 hidden items-stretch md:flex">
+            {TABS.map((t) => (
+              <NavLink key={t.to} to={t.to} end={t.to === "/"} className={({ isActive }) => cn("flex items-center border-l border-line px-4 text-[13px]", isActive ? "bg-raised text-gold" : "text-cream/75 hover:text-cream")}>
+                {t.label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="ml-auto flex items-stretch">
+            <span className={cn("hidden items-center gap-1.5 border-l border-line px-4 font-mono text-[10.5px] uppercase tracking-[0.12em] lg:flex", e.source === "demo" ? "text-gold" : "text-taupe")}>
+              <span className={cn("h-1.5 w-1.5 rounded-full", e.source === "demo" ? "bg-gold" : "bg-bull animate-pulse")} />
+              {e.source === "demo" ? "демо-рынок" : `live · ${ago(e.now - e.quoteAt)}`}
+            </span>
+            <Link to="/docs" className="hidden items-center border-l border-line px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-taupe hover:text-gold sm:flex">
+              ТЗ
+            </Link>
+            <Inbox />
           </div>
         </div>
       </header>
 
-      <div className="pt-14 lg:grid lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_220px]">
-        {/* left sidebar */}
-        <aside className="hidden lg:block border-r border-line">
-          <div className="sticky top-14 max-h-[calc(100vh-56px)] overflow-y-auto">
-            <div className="px-4 py-4 micro-label border-b border-line">Содержание</div>
-            <NavList activeId={activeId} />
-            <div className="px-4 py-5 text-[11.5px] leading-relaxed text-taupe">
-              Документ: концепция, архитектура и техническое задание.
-              Не является инвестиционной рекомендацией.
-            </div>
-          </div>
-        </aside>
+      {e.source === "demo" && loc.pathname === "/" && (
+        <div className="mt-14 border-b border-gold/30 bg-gold/10 px-4 py-2 text-center text-[12px] text-gold">
+          Демо-режим: синтетический рынок XAUUSD. Live-котировки Binance недоступны из этой сети или выбран демо в настройках.
+        </div>
+      )}
 
-        {/* main column */}
-        <main className="min-w-0">
-          {/* hero */}
-          <div className="border-b border-line">
-            <div className="px-5 py-12 sm:px-8 lg:px-12 lg:py-16 max-w-[860px]">
-              <div className="micro-label text-gold mb-4">
-                Техническое задание · v1.0
-              </div>
-              <h1 className="font-sans font-bold leading-[0.98] tracking-tight text-[40px] sm:text-[64px]">
-                Автономный ИИ-аналитик
-                <br />
-                золота <span className="text-gold">XAUUSD</span>
-              </h1>
-              <p className="mt-6 max-w-[62ch] text-[15px] sm:text-base leading-relaxed text-taupe">
-                Концепция, архитектура и техническое задание бесплатного приложения:
-                мульти-стратегический анализ в реальном времени, опережающие сигналы
-                с R:R ≥ 1:2 и цикл самообучения на исходах сделок.
-              </p>
-              <div className="mt-8 border border-line">
-                <HeroChart />
-                <div className="grid grid-cols-2 sm:grid-cols-4 border-t border-line">
-                  {[
-                    ["Инструмент", "XAUUSD · спот"],
-                    ["Таймфреймы", "M15 · H1 · H4 · D1"],
-                    ["Сигналы", "опережающие, R:R ≥ 1:2"],
-                    ["Стоимость MVP", "≈ $0–10 / мес"],
-                  ].map(([k, v]) => (
-                    <div key={k} className="border-r border-line last:border-r-0 px-3 py-3 sm:px-4">
-                      <div className="micro-label">{k}</div>
-                      <div className="mt-1 font-mono text-[12.5px] text-cream">{v}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <Ticker />
-          </div>
+      <main className={cn("mx-auto max-w-[1440px] px-3 pb-24 sm:px-5 md:pb-10", e.source === "demo" && loc.pathname === "/" ? "pt-4" : "pt-[72px]")}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/signals" element={<Signals />} />
+          <Route path="/signals/:id" element={<SignalDetail />} />
+          <Route path="/stats" element={<Stats />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
+        <footer className="mt-10 border-t border-line pt-4 text-[11.5px] leading-relaxed text-taupe">
+          AURUM·AI — аналитический инструмент, не брокер и не инвестиционная рекомендация. Торговля золотом сопряжена с высоким риском потери капитала.{" "}
+          <Link to="/docs" className="text-gold hover:underline">
+            Проектная документация →
+          </Link>
+        </footer>
+      </main>
 
-          <Overview />
-          <ProductUx />
-          <AiArch />
-          <SelfLearning />
-          <DataSchemas />
-          <TechStack />
-          <Roadmap />
-          <Risks />
-
-          {/* footer */}
-          <footer className="px-5 py-10 sm:px-8 lg:px-12 max-w-[860px] safe-bottom">
-            <div className="border-t border-line pt-6">
-              <div className="micro-label mb-3">Дисклеймер</div>
-              <p className="text-[12.5px] leading-relaxed text-taupe max-w-[72ch]">
-                Настоящий документ описывает концепцию аналитического продукта и не является
-                инвестиционной рекомендацией. Торговля золотом и производными инструментами
-                сопряжена с высоким риском потери капитала. Упомянутые лимиты бесплатных
-                тарифов сторонних сервисов актуальны на момент составления документа и требуют
-                проверки перед реализацией.
-              </p>
-              <div className="mt-6 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-taupe">
-                <span className="h-2 w-2 bg-gold" /> AURUM·AI — концепция + ТЗ · 01.10.2026
-              </div>
-            </div>
-          </footer>
-        </main>
-
-        {/* right toc */}
-        <aside className="hidden xl:block border-l border-line">
-          <div className="sticky top-14 px-4 py-4">
-            <div className="micro-label mb-3">В этом разделе</div>
-            <div className="mb-2 font-mono text-[11px] text-gold">
-              {activeSection.num} — {activeSection.label}
-            </div>
-            <nav className="flex flex-col">
-              {activeSection.children.map((c) => (
-                <a
-                  key={c.id}
-                  href={`#${c.id}`}
-                  className={cn(
-                    "flex min-h-[36px] items-center border-l py-1.5 pl-3 text-[12px] leading-snug transition-colors",
-                    c.id === activeId
-                      ? "border-gold text-cream"
-                      : "border-line text-taupe hover:text-cream"
-                  )}
-                >
-                  {c.label}
-                </a>
-              ))}
-            </nav>
-          </div>
-        </aside>
-      </div>
+      {/* mobile tab bar */}
+      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-ink/95 backdrop-blur md:hidden">
+        {TABS.map((t) => (
+          <NavLink key={t.to} to={t.to} end={t.to === "/"} className={({ isActive }) => cn("flex flex-col items-center gap-1 py-2 text-[10.5px]", isActive ? "text-gold" : "text-taupe")}>
+            <Icon d={t.icon} />
+            {t.label}
+          </NavLink>
+        ))}
+      </nav>
     </div>
+  );
+}
+
+export default function App() {
+  const loc = useLocation();
+  if (loc.pathname.startsWith("/docs"))
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-ink" />}>
+        <Docs />
+      </Suspense>
+    );
+  return (
+    <EngineProvider>
+      <TooltipProvider delayDuration={150}>
+        <Shell />
+        <Toaster theme="dark" position="top-right" toastOptions={{ style: { background: "#1b1916", border: "1px solid #2c261d", color: "#fef1e8", borderRadius: 2 } }} />
+      </TooltipProvider>
+    </EngineProvider>
   );
 }
